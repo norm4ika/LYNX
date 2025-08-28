@@ -96,12 +96,19 @@ export default function HomePage() {
             Normchikas Saagento
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            გარდაქმენით თქვენი სურათები შთამბეჭდავ რეკლამებად AI-ის დახმარებით
+            გარდაქმენით თქვენი სურათები Ultra-Realistic კომერციულ რეკლამებად AI-ის დახმარებით
           </p>
           {!user && (
             <p className="text-sm text-yellow-400 mt-4">
-              🔐 გთხოვთ შეხვიდეთ სისტემაში რეკლამის გენერირებისთვის
+              🔐 გთხოვთ შეხვიდეთ სისტემაში Ultra-Realistic რეკლამის გენერირებისთვის
             </p>
+          )}
+          {user && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-lg">
+              <p className="text-purple-300 text-sm">
+                🚀 Ultra-Realistic Commercial AI მზადაა! N8N workflow უკვე დაკონფიგურირებულია.
+              </p>
+            </div>
           )}
         </motion.div>
 
@@ -165,8 +172,8 @@ export default function HomePage() {
               onClick={handleGenerate}
               disabled={!isFormValid || isGenerating || !user}
               className={`w-full py-4 px-8 rounded-lg font-semibold text-lg transition-all duration-200 flex items-center justify-center gap-2 ${isFormValid && !isGenerating && user
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl'
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
             >
               {isGenerating ? (
