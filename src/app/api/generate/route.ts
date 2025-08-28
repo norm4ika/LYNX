@@ -66,6 +66,40 @@ export async function POST(request: NextRequest) {
       .from('images')
       .getPublicUrl(fileName)
 
+    // Ensure user exists in public.users table
+    const { data: existingUser, error: userCheckError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single()
+
+    if (userCheckError && userCheckError.code === 'PGRST116') {
+      // User doesn't exist in public.users, create them
+      console.log('Creating user in public.users table:', user.id)
+      const { error: userCreateError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      if (userCreateError) {
+        console.error('Failed to create user:', userCreateError)
+        return NextResponse.json({
+          error: 'Failed to create user record',
+          details: userCreateError.message
+        }, { status: 500 })
+      }
+    } else if (userCheckError) {
+      console.error('User check error:', userCheckError)
+      return NextResponse.json({
+        error: 'Failed to verify user',
+        details: userCheckError.message
+      }, { status: 500 })
+    }
+
     // Create generation record using supabaseAdmin
     const { data: generation, error: dbError } = await supabaseAdmin
       .from('generations')
