@@ -10,10 +10,8 @@
     },
     "dependencies": {
         "@stripe/stripe-js": "2.2.0",
-        "@supabase/auth-helpers-nextjs": "^0.10.0",
-        "@supabase/ssr": "^0.0.10",
+        "@supabase/ssr": "^0.5.1",
         "@supabase/supabase-js": "2.38.4",
-        "@types/react-dropzone": "^5.1.0",
         "clsx": "2.0.0",
         "framer-motion": "10.16.16",
         "lucide-react": "0.294.0",
@@ -37,7 +35,7 @@
         "typescript": "5.3.3"
     },
     "engines": {
-        "node": ">=18.0.0",
+        "node": "18.x",
         "npm": ">=9.0.0"
     }
 }
