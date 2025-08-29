@@ -18,12 +18,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!serviceRoleKey) {
-  console.warn('Missing SUPABASE_SERVICE_ROLE_KEY environment variable - admin functions may not work')
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable - admin functions will not work properly')
+  console.error('This will cause RLS policy failures for callback endpoints')
 }
 
 export const supabaseAdmin = createClient(
   supabaseUrl,
-  serviceRoleKey || supabaseAnonKey // Fallback to anon key if service role key is not available
+  serviceRoleKey || supabaseAnonKey, // Fallback to anon key if service role key is not available
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 )
 
 // Database types
@@ -59,6 +66,15 @@ export interface Database {
           prompt_text: string
           status: 'pending' | 'processing' | 'completed' | 'failed'
           stripe_payment_intent_id: string | null
+          error_message: string | null
+          quality_score: number | null
+          processing_time: number | null
+          commercial_style: string | null
+          target_audience: string | null
+          brand_guidelines: string | null
+          workflow_metadata: any | null
+          n8n_execution_id: string | null
+          workflow_version: string | null
           created_at: string
           updated_at: string
         }
@@ -70,6 +86,15 @@ export interface Database {
           prompt_text: string
           status?: 'pending' | 'processing' | 'completed' | 'failed'
           stripe_payment_intent_id?: string | null
+          error_message?: string | null
+          quality_score?: number | null
+          processing_time?: number | null
+          commercial_style?: string | null
+          target_audience?: string | null
+          brand_guidelines?: string | null
+          workflow_metadata?: any | null
+          n8n_execution_id?: string | null
+          workflow_version?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -81,6 +106,15 @@ export interface Database {
           prompt_text?: string
           status?: 'pending' | 'processing' | 'completed' | 'failed'
           stripe_payment_intent_id?: string | null
+          error_message?: string | null
+          quality_score?: number | null
+          processing_time?: number | null
+          commercial_style?: string | null
+          target_audience?: string | null
+          brand_guidelines?: string | null
+          workflow_metadata?: any | null
+          n8n_execution_id?: string | null
+          workflow_version?: string | null
           created_at?: string
           updated_at?: string
         }

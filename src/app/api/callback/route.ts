@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Helper function to safely convert string to number
+function safeParseFloat(value: any): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = parseFloat(value)
+  return isNaN(parsed) ? null : parsed
+}
+
+// Helper function to safely convert string to integer
+function safeParseInt(value: any): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = parseInt(value, 10)
+  return isNaN(parsed) ? null : parsed
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -53,13 +67,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (processingTime) {
-      updateData.processing_time = processingTime
-      console.log(`Processing time: ${processingTime}ms`)
+      updateData.processing_time = safeParseInt(processingTime)
+      console.log(`Processing time: ${updateData.processing_time}ms`)
     }
 
     if (qualityScore) {
-      updateData.quality_score = qualityScore
-      console.log(`Quality score: ${qualityScore}`)
+      updateData.quality_score = safeParseFloat(qualityScore)
+      console.log(`Quality score: ${updateData.quality_score}`)
     }
 
     if (commercialStyle) {
@@ -83,14 +97,36 @@ export async function POST(request: NextRequest) {
       updateData.workflow_version = workflowVersion
     }
 
-    const { error } = await supabaseAdmin
+    console.log('Update data:', JSON.stringify(updateData, null, 2))
+
+    const { data, error } = await supabaseAdmin
       .from('generations')
       .update(updateData)
       .eq('id', generationId)
+      .select()
 
     if (error) {
-      console.error('Failed to update generation:', error)
-      return NextResponse.json({ error: 'Failed to update generation' }, { status: 500 })
+      console.error('Failed to update generation:', {
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        generationId,
+        updateData
+      })
+      return NextResponse.json({
+        error: 'Failed to update generation',
+        details: error.message,
+        code: error.code
+      }, { status: 500 })
+    }
+
+    if (!data || data.length === 0) {
+      console.error('No generation found with ID:', generationId)
+      return NextResponse.json({
+        error: 'Generation not found',
+        generationId
+      }, { status: 404 })
     }
 
     console.log(`Successfully updated generation ${generationId}`)
