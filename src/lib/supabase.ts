@@ -36,8 +36,7 @@ export const supabase = createClient(
       detectSessionInUrl: true
     },
     storage: {
-      retryAttempts: 3,
-      retryInterval: 1000
+      maxRetries: 3
     }
   }
 )
@@ -59,8 +58,7 @@ export const supabaseAdmin = createClient(
       persistSession: false
     },
     storage: {
-      retryAttempts: 3,
-      retryInterval: 1000
+      maxRetries: 3
     }
   }
 )
