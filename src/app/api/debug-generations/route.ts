@@ -12,7 +12,7 @@ interface Generation {
     updated_at: string
     quality_score: number | null
     error_message: string | null
-    users?: {
+    users: {
         email: string
     }
 }
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
         // Group by user
         const generationsByUser = generations?.reduce((acc: any, gen: Generation) => {
-            const email = gen.users?.email || 'unknown'
+            const email = gen.users.email || 'unknown'
             if (!acc[email]) {
                 acc[email] = [] as any[]
             }
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
             allGenerations: generations?.map((g: Generation) => ({
                 id: g.id,
                 user_id: g.user_id,
-                user_email: g.users?.email,
+                user_email: g.users.email,
                 status: g.status,
                 created_at: g.created_at,
                 has_generated_image: !!g.generated_image_url,

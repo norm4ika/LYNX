@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       id: gen.id,
       status: gen.status,
       created_at: gen.created_at,
-      user_email: gen.users?.email,
+      user_email: gen.users.email,
       original_image_url: gen.original_image_url,
       generated_image_url: gen.generated_image_url,
       prompt_text: gen.prompt_text,
