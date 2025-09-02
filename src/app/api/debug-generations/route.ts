@@ -12,9 +12,9 @@ interface Generation {
     updated_at: string
     quality_score: number | null
     error_message: string | null
-    users: {
+    users?: {
         email: string
-    }
+    }[]
 }
 
 export async function GET(request: NextRequest) {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         updated_at,
         quality_score,
         error_message,
-        users!inner(email)
+        users(email)
       `)
             .order('created_at', { ascending: false })
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
         // Log first few generations with full data for debugging
         if (generations && generations.length > 0) {
-            console.log('📊 First 3 generations with full data:', generations.slice(0, 3).map((g: Generation) => ({
+            console.log('📊 First 3 generations with full data:', generations.slice(0, 3).map((g: any) => ({
                 id: g.id,
                 status: g.status,
                 original_image_url: g.original_image_url,
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Group by user
-        const generationsByUser = generations?.reduce((acc: any, gen: Generation) => {
-            const email = gen.users.email || 'unknown'
+        const generationsByUser = generations?.reduce((acc: any, gen: any) => {
+            const email = gen.users?.[0]?.email || 'unknown'
             if (!acc[email]) {
                 acc[email] = [] as any[]
             }
@@ -99,10 +99,10 @@ export async function GET(request: NextRequest) {
             success: true,
             totalGenerations: generations?.length || 0,
             generationsByUser,
-            allGenerations: generations?.map((g: Generation) => ({
+            allGenerations: generations?.map((g: any) => ({
                 id: g.id,
                 user_id: g.user_id,
-                user_email: g.users.email,
+                user_email: g.users?.[0]?.email,
                 status: g.status,
                 created_at: g.created_at,
                 has_generated_image: !!g.generated_image_url,
