@@ -34,9 +34,6 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true
-    },
-    storage: {
-      maxRetries: 3
     }
   }
 )
@@ -56,9 +53,6 @@ export const supabaseAdmin = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false
-    },
-    storage: {
-      maxRetries: 3
     }
   }
 )
