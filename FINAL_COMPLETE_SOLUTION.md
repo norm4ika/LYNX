@@ -20,6 +20,11 @@ npm error peer @supabase/supabase-js@"^2.43.4" from @supabase/ssr@0.5.2
 npm error Found: @supabase/supabase-js@2.38.4
 ```
 
+### 4. Build Script Error
+```
+Error: Cannot find module '/vercel/path0/scripts/vercel-build-check.js'
+```
+
 ## ✅ გადაწყვეტები
 
 ### 1. Environment Variables Issue
@@ -34,6 +39,10 @@ npm error Found: @supabase/supabase-js@2.38.4
 - **პრობლემა**: Supabase packages version mismatch (`@supabase/ssr` მოითხოვს `@supabase/supabase-js@^2.43.4`)
 - **გადაწყვეტა**: Package versions განახლებულია და NPM configuration დაყენებულია
 
+### 4. Build Script Issue
+- **პრობლემა**: `scripts/vercel-build-check.js` ფაილი ვერ მოიძებნა Vercel environment-ში
+- **გადაწყვეტა**: შექმნილია ახალი `vercel-build.js` script root directory-ში
+
 ## 🚀 ნაბიჯები
 
 ### Step 1: Code Changes (უკვე გაკეთებულია)
@@ -41,6 +50,7 @@ npm error Found: @supabase/supabase-js@2.38.4
 - ✅ `package.json`-ში Node.js version განახლებულია 22.x-მდე
 - ✅ Supabase packages versions განახლებულია
 - ✅ NPM configuration დაყენებულია (`.npmrc`)
+- ✅ Build script fix - შექმნილია `vercel-build.js`
 - ✅ შექმნილია environment check scripts
 - ✅ გაუმჯობესებულია error handling
 
@@ -138,11 +148,12 @@ Build logs-ში უნდა ნახოთ:
 - `VERCEL_DEPLOYMENT_INSTRUCTIONS.md` - Detailed instructions
 - `NODEJS_UPGRADE_INFO.md` - Node.js upgrade guide
 - `DEPENDENCY_CONFLICT_FIX.md` - Dependency conflict resolution guide
+- `BUILD_SCRIPT_FIX.md` - Build script fix guide
 - `FINAL_COMPLETE_SOLUTION.md` - This complete guide
 
 ### Modified Files
-- `vercel.json` - Removed environment variables references
-- `package.json` - Added build check script, Updated Node.js to 22.x, Updated package versions
+- `vercel.json` - Removed environment variables references, Updated buildCommand
+- `package.json` - Added build scripts, Updated Node.js to 22.x, Updated package versions
 - `src/lib/supabase.ts` - Improved error handling
 - `.npmrc` - Updated NPM configuration for dependency resolution
 
@@ -177,10 +188,11 @@ Build logs-ში უნდა ნახოთ:
 
 ## 🎯 Expected Result
 
-სამივე პრობლემის გადაჭრის შემდეგ:
+ოთხივე პრობლემის გადაჭრის შემდეგ:
 - ✅ Vercel deployment წარმატებით დასრულდება
-- ✅ Node.js 22.x გამოყენებული იქნება
+- ✅ Node.js 22.x გამოიყენებული იქნება
 - ✅ Dependency conflicts გადაწყვეტილია
+- ✅ Build script errors გადაწყვეტილია
 - ✅ Environment variables სწორად მუშაობს
 - ✅ App მუშაობს Supabase-თან კავშირში
 
@@ -190,7 +202,9 @@ Build logs-ში უნდა ნახოთ:
 - [ ] `package.json`-ში Node.js version განახლებულია 22.x-მდე
 - [ ] Supabase packages versions განახლებულია
 - [ ] `.npmrc` ფაილი შექმნილია
+- [ ] `vercel-build.js` script შექმნილია root directory-ში
 - [ ] Dependencies locally წარმატებით დაყენებულია (`npm run fix-deps`)
+- [ ] Local build test: `npm run build:vercel`
 - [ ] Environment variables დამატებულია Vercel Dashboard-ზე
 - [ ] Code push-და GitHub-ზე
 - [ ] Vercel deployment წარმატებით დასრულდა
@@ -204,11 +218,14 @@ npm run fix-deps
 # Clean install
 npm run clean-install
 
+# Local build (simple)
+npm run build
+
+# Vercel build (with checks)
+npm run build:vercel
+
 # Build check
 npm run vercel-build-check
-
-# Full build
-npm run build
 ```
 
 ---
