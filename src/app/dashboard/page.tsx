@@ -1,229 +1,418 @@
 'use client'
 
+import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import useSWR from 'swr'
-import Navigation from '@/components/Navigation'
-import { formatDate } from '@/lib/utils'
-import { useState } from 'react'
+import { ImageModal } from '@/components/ImageModal'
+import { GenerationCard } from '@/components/GenerationCard'
+import { LoadingSkeleton } from '@/components/LoadingSkeleton'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { DeleteModeUI } from '@/components/DeleteModeUI'
+import Link from 'next/link'
 
-const fetcher = async (url: string, token: string) => {
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  })
-  if (!response.ok) {
-    throw new Error('Failed to fetch data')
-  }
-  return response.json()
+interface Generation {
+  id: string
+  user_id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  created_at: string
+  original_image_url: string
+  generated_image_url: string
+  prompt_text?: string
+  quality_score?: number
+  error_message?: string
+}
+
+interface GenerationsResponse {
+  generations: Generation[]
+  total: number
 }
 
 export default function DashboardPage() {
-  const { user, session } = useAuth()
-  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const { user, session, signOut } = useAuth()
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedImageAlt, setSelectedImageAlt] = useState('')
+  const [isDeleteMode, setIsDeleteMode] = useState(false)
+  const [selectedGenerations, setSelectedGenerations] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  })
 
-  const { data: generations = [], error, mutate } = useSWR(
-    user && session?.access_token ? ['/api/generations', session.access_token] : null,
-    ([url, token]) => fetcher(url, token),
-    { refreshInterval: 5000 } // Refresh every 5 seconds
+  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0.3])
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.8])
+
+  // Fetch generations with SWR
+  const { data, error, mutate } = useSWR<GenerationsResponse>(
+    user ? '/api/generations' : null,
+    async (url) => {
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      return response.json()
+    },
+    {
+      refreshInterval: 5000,
+      revalidateOnFocus: true
+    }
   )
 
+  const generations = data?.generations || []
+  const totalGenerations = data?.total || 0
+
+  // Handle image click for modal
+  const handleImageClick = (url: string, alt: string) => {
+    setSelectedImage(url)
+    setSelectedImageAlt(alt)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setSelectedImage(null)
+    setSelectedImageAlt('')
+  }
+
+  // Handle generation selection
+  const handleGenerationSelect = (id: string) => {
+    setSelectedGenerations(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedGenerations.size === generations.length) {
+      setSelectedGenerations(new Set())
+    } else {
+      setSelectedGenerations(new Set(generations.map(g => g.id)))
+    }
+  }
+
+  // Handle delete selected
+  const handleDeleteSelected = async () => {
+    if (selectedGenerations.size === 0) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/generations/delete', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          generationIds: Array.from(selectedGenerations)
+        })
+      })
+
+      if (response.ok) {
+        // Refresh data and reset selection
+        await mutate()
+        setSelectedGenerations(new Set())
+        setIsDeleteMode(false)
+      } else {
+        console.error('Failed to delete generations')
+      }
+    } catch (error) {
+      console.error('Error deleting generations:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Exit delete mode
+  const exitDeleteMode = () => {
+    setIsDeleteMode(false)
+    setSelectedGenerations(new Set())
+  }
+
   // Calculate statistics
-  const totalGenerations = generations.length
-  const completedGenerations = generations.filter((g: any) => g.status === 'completed').length
-  const pendingGenerations = generations.filter((g: any) => g.status === 'pending').length
-  const failedGenerations = generations.filter((g: any) => g.status === 'failed').length
-  const processingGenerations = generations.filter((g: any) => g.status === 'processing').length
+  const stats = {
+    total: totalGenerations,
+    completed: generations.filter(g => g.status === 'completed').length,
+    processing: generations.filter(g => g.status === 'processing').length,
+    failed: generations.filter(g => g.status === 'failed').length
+  }
 
-  // Calculate average quality score
-  const completedWithScore = generations.filter((g: any) => g.status === 'completed' && g.quality_score)
-  const averageQualityScore = completedWithScore.length > 0
-    ? (completedWithScore.reduce((sum: number, g: any) => sum + g.quality_score, 0) / completedWithScore.length).toFixed(1)
-    : 'N/A'
-
-  // Filter generations by status
-  const filteredGenerations = selectedStatus === 'all'
-    ? generations
-    : generations.filter((g: any) => g.status === selectedStatus)
-
+  // Loading state
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Navigation />
-        <div className="container mx-auto px-4 py-8 pt-24">
-          <div className="text-center text-white">
-            <h1 className="text-2xl font-bold mb-4">გთხოვთ შეხვიდეთ სისტემაში</h1>
-            <p>დეშბორდის სანახავად აუცილებელია ავტორიზაცია</p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-xl mb-4">Please sign in to access the dashboard</div>
+          <Link href="/login" className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+            Sign In
+          </Link>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Navigation />
-      <div className="container mx-auto px-4 py-8 pt-24">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        {/* Animated Background Particles */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-2 h-2 bg-purple-400/30 rounded-full"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{
+                y: [0, -100, 0],
+                opacity: [0.3, 0.8, 0.3],
+                scale: [1, 1.5, 1],
+              }}
+              transition={{
+                duration: Math.random() * 3 + 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: Math.random() * 2,
+              }}
+            />
+          ))}
+        </div>
+
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Ultra-Realistic Commercial AI დეშბორდი</h1>
-          <p className="text-white/60">მოგესალმებათ, {user.email}</p>
-        </div>
+        <motion.header
+          className="relative z-10 bg-white/5 backdrop-blur-xl border-b border-white/10"
+          style={{ opacity, scale }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <Link href="/" className="group">
+                <motion.h1
+                  className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  NS Normchikas Saagento
+                </motion.h1>
+              </Link>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20">
-            <div className="text-2xl font-bold text-white">{totalGenerations}</div>
-            <div className="text-white/60">სულ გენერაცია</div>
-          </div>
-          <div className="bg-green-500/20 backdrop-blur-md rounded-lg p-6 border border-green-500/30">
-            <div className="text-2xl font-bold text-green-400">{completedGenerations}</div>
-            <div className="text-white/60">დასრულებული</div>
-          </div>
-          <div className="bg-blue-500/20 backdrop-blur-md rounded-lg p-6 border border-blue-500/30">
-            <div className="text-2xl font-bold text-blue-400">{processingGenerations}</div>
-            <div className="text-white/60">დამუშავება</div>
-          </div>
-          <div className="bg-yellow-500/20 backdrop-blur-md rounded-lg p-6 border border-yellow-500/30">
-            <div className="text-2xl font-bold text-yellow-400">{pendingGenerations}</div>
-            <div className="text-white/60">მიმდინარე</div>
-          </div>
-          <div className="bg-red-500/20 backdrop-blur-md rounded-lg p-6 border border-red-500/30">
-            <div className="text-2xl font-bold text-red-400">{failedGenerations}</div>
-            <div className="text-white/60">შეცდომა</div>
-          </div>
-        </div>
-
-        {/* Quality Score Card */}
-        <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 backdrop-blur-md rounded-lg p-6 border border-purple-500/30 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">საშუალო ხარისხის ქულა</h3>
-              <p className="text-white/60">Ultra-Realistic Commercial AI</p>
+              <div className="flex items-center space-x-4">
+                <motion.button
+                  onClick={() => signOut()}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Sign Out
+                </motion.button>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-purple-400">{averageQualityScore}</div>
           </div>
-        </div>
+        </motion.header>
 
-        {/* Filter */}
-        <div className="mb-6">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg px-4 py-2 text-white"
+        {/* Main Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Top Panel - Cleaned Up */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <option value="all">ყველა სტატუსი</option>
-            <option value="pending">მიმდინარე</option>
-            <option value="processing">დამუშავება</option>
-            <option value="completed">დასრულებული</option>
-            <option value="failed">შეცდომა</option>
-          </select>
-        </div>
-
-        {/* Generations List */}
-        <div className="bg-white/10 backdrop-blur-md rounded-lg border border-white/20 overflow-hidden">
-          {error ? (
-            <div className="p-6 text-center text-red-400">
-              შეცდომა მონაცემების ჩატვირთვისას
-            </div>
-          ) : filteredGenerations.length === 0 ? (
-            <div className="p-6 text-center text-white/60">
-              {selectedStatus === 'all' ? 'გენერაციები არ არის' : 'ამ სტატუსის გენერაციები არ არის'}
-            </div>
-          ) : (
-            <div className="divide-y divide-white/10">
-              {filteredGenerations.map((generation: any) => (
-                <div key={generation.id} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${generation.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                            generation.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                              generation.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
-                                'bg-red-500/20 text-red-400'
-                          }`}>
-                          {generation.status === 'completed' ? 'დასრულებული' :
-                            generation.status === 'pending' ? 'მიმდინარე' :
-                              generation.status === 'processing' ? 'დამუშავება' :
-                                'შეცდომა'}
-                        </span>
-                        <span className="text-white/40 text-sm">
-                          {formatDate(generation.created_at)}
-                        </span>
-                        {generation.quality_score && (
-                          <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs font-medium">
-                            ხარისხი: {generation.quality_score}/10
-                          </span>
-                        )}
-                        {generation.processing_time && (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-medium">
-                            {Math.round(generation.processing_time / 1000)}s
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-white mb-3">{generation.prompt_text}</p>
-
-                      {/* Commercial Style & Target Audience */}
-                      {(generation.commercial_style || generation.target_audience) && (
-                        <div className="flex space-x-4 mb-3">
-                          {generation.commercial_style && (
-                            <span className="px-2 py-1 bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-purple-300 rounded text-xs">
-                              {generation.commercial_style}
-                            </span>
-                          )}
-                          {generation.target_audience && (
-                            <span className="px-2 py-1 bg-gradient-to-r from-green-500/20 to-teal-500/20 text-green-300 rounded text-xs">
-                              {generation.target_audience}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex space-x-4">
-                        {generation.original_image_url && (
-                          <div>
-                            <p className="text-white/60 text-sm mb-1">ორიგინალი სურათი:</p>
-                            <img
-                              src={generation.original_image_url}
-                              alt="Original"
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                          </div>
-                        )}
-
-                        {generation.generated_image_url && (
-                          <div>
-                            <p className="text-white/60 text-sm mb-1">Ultra-Realistic რეკლამა:</p>
-                            <img
-                              src={generation.generated_image_url}
-                              alt="Generated"
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* N8N Execution Info */}
-                      {generation.n8n_execution_id && (
-                        <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-xs text-blue-300">
-                          N8N Execution ID: {generation.n8n_execution_id}
-                        </div>
-                      )}
-
-                      {generation.error_message && (
-                        <div className="mt-3 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-                          <p className="text-red-400 text-sm">{generation.error_message}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6">
+              <div className="flex justify-between items-center">
+                <div className="text-center flex-1">
+                  <motion.div
+                    className="text-2xl font-bold text-white mb-2"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                  >
+                    Success: {totalGenerations} generations loaded
+                  </motion.div>
+                  <motion.div
+                    className="text-purple-200"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.5 }}
+                  >
+                    Welcome back, {user.email}
+                  </motion.div>
                 </div>
-              ))}
+
+                <motion.button
+                  onClick={() => setIsDeleteMode(!isDeleteMode)}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 ${isDeleteMode
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isDeleteMode ? 'Exit Delete Mode' : 'გასუფთავება'}
+                </motion.button>
+              </div>
             </div>
-          )}
+          </motion.div>
+
+          {/* Statistics Cards */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            {[
+              { label: 'Total', value: stats.total, color: 'from-blue-500 to-blue-600' },
+              { label: 'Completed', value: stats.completed, color: 'from-green-500 to-green-600' },
+              { label: 'Processing', value: stats.processing, color: 'from-yellow-500 to-yellow-600' },
+              { label: 'Failed', value: stats.failed, color: 'from-red-500 to-red-600' }
+            ].map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-6 text-center"
+                initial={{ opacity: 0, y: 20, rotateY: -15 }}
+                animate={{ opacity: 1, y: 0, rotateY: 0 }}
+                transition={{ delay: 0.4 + index * 0.1, duration: 0.5, type: "spring" }}
+                whileHover={{
+                  scale: 1.05,
+                  rotateY: 5,
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
+                }}
+                style={{ transformStyle: "preserve-3d" }}
+              >
+                <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}>
+                  {stat.value}
+                </div>
+                <div className="text-purple-200 text-sm font-medium">{stat.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Delete Mode UI */}
+          <AnimatePresence>
+            {isDeleteMode && (
+              <DeleteModeUI
+                selectedCount={selectedGenerations.size}
+                totalCount={generations.length}
+                isAllSelected={selectedGenerations.size === generations.length}
+                onSelectAll={handleSelectAll}
+                onDeleteSelected={handleDeleteSelected}
+                onCancel={exitDeleteMode}
+                isDeleting={isDeleting}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Generations Section */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          >
+            <motion.h2
+              className="text-3xl font-bold text-white mb-6 text-center"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              Your Generations
+            </motion.h2>
+
+            {/* Error Display */}
+            {error && (
+              <motion.div
+                className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-center"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="text-red-400 font-medium mb-2">Error loading generations</div>
+                <div className="text-red-300 text-sm">{(error as Error).message}</div>
+              </motion.div>
+            )}
+
+            {/* Generations Grid */}
+            {generations.length === 0 ? (
+              <motion.div
+                className="text-center py-16"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+              >
+                <div className="text-6xl mb-4">🎨</div>
+                <div className="text-2xl font-bold text-white mb-2">No generations yet</div>
+                <div className="text-purple-200 mb-6">Start creating amazing images!</div>
+                <Link
+                  href="/"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-medium text-lg transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Create Your First Generation
+                </Link>
+              </motion.div>
+            ) : (
+              <motion.div
+                className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8"
+                ref={containerRef}
+              >
+                <AnimatePresence>
+                  {generations.map((generation, index) => (
+                    <motion.div
+                      key={generation.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.8 }}
+                      transition={{
+                        delay: 0.8 + index * 0.1,
+                        duration: 0.5,
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 20
+                      }}
+                      layout
+                    >
+                      <GenerationCard
+                        generation={generation}
+                        onImageClick={handleImageClick}
+                        isDeleteMode={isDeleteMode}
+                        isSelected={selectedGenerations.has(generation.id)}
+                        onSelectGeneration={handleGenerationSelect}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
+
+        {/* Image Modal */}
+        <AnimatePresence>
+          {isModalOpen && selectedImage && (
+            <ImageModal
+              imageUrl={selectedImage}
+              alt={selectedImageAlt}
+              onClose={closeModal}
+            />
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </ErrorBoundary>
   )
 }

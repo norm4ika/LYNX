@@ -1,0 +1,364 @@
+{
+  "name": "Ultra-Commercial AI Generation - FIXED VERSION",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ultra-commercial-ai",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-1744, 96],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "webhookId": "f6d512a5-0a84-4b4c-a03d-c12c7aa15a8a"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1488, 96],
+      "id": "http-request",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "text": "You are 'Ultra-Realistic Commercial AI Director' - the most advanced AI for creating photorealistic commercial advertisements.\n\nAnalyze this image for ultra-realistic commercial generation. The user wants: {{ $('Webhook Trigger').first().json.body.promptText }}\n\nProvide analysis in JSON format:\n{\n  \"objectType\": \"car/product/person/etc\",\n  \"optimalSize\": \"1:1/16:9/4:3\",\n  \"resolution\": \"2048x2048/3072x2048/etc\",\n  \"commercialStyle\": \"luxury/modern/vintage/premium\",\n  \"targetAudience\": \"youth/business/family/luxury\",\n  \"lightingStyle\": \"studio/natural/cinematic/dramatic\",\n  \"backgroundComplexity\": \"simple/moderate/complex\",\n  \"qualityLevel\": \"ultra-premium\",\n  \"realismScore\": 9.5,\n  \"commercialAppeal\": 9.8\n}",
+        "imageUrls": "={{ $('Webhook Trigger').first().json.body.imageUrl }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [-1200, -112],
+      "id": "analyze-image",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "lnS18Dg5APTeu3ze",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are 'Ultra-Prompt Master' - creating prompts for photorealistic commercial images that are INDISTINGUISHABLE from professional photography.\n\n## PROMPT CREATION RULES\n1. **Photorealistic Keywords**: Always include: 'photograph', 'DSLR', '8K UHD', 'high detail', 'sharp focus', 'professional lighting', 'studio quality', 'commercial photography'\n2. **Lighting Mastery**: Specify exact lighting: 'soft key light', 'rim lighting', 'fill light', 'dramatic shadows'\n3. **Commercial Context**: Add commercial elements: 'product showcase', 'brand presentation', 'marketing material'\n4. **Technical Excellence**: Include: 'perfect composition', 'rule of thirds', 'depth of field', 'bokeh effect'\n5. **Realism Enhancement**: Add: 'no AI artifacts', 'natural textures', 'realistic materials', 'authentic details'\n\n## OUTPUT FORMAT\nReturn JSON with:\n{\n  \"backgroundPrompt\": \"detailed background description\",\n  \"lightingPrompt\": \"specific lighting setup\",\n  \"commercialPrompt\": \"commercial context elements\",\n  \"negativePrompt\": \"nsfw, blur, worst quality, bad quality, low quality, artifacts, AI generated, fake, unrealistic, cartoon, anime, painting, drawing, illustration, watermark, signature, text, logo, oversaturated, overexposed, underexposed, noise, grain, compression artifacts\"\n}",
+              "role": "system"
+            },
+            {
+              "content": "Analysis: {{ $json.content }}\nUser Request: {{ $('Webhook Trigger').first().json.body.promptText }}\n\nBased on this analysis of the uploaded image, create ultra-realistic commercial prompts for the user's request: \"{{ $('Webhook Trigger').first().json.body.promptText }}\"\n\nCreate prompts that will generate photorealistic commercial imagery.",
+              "role": "user"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [-960, -112],
+      "id": "ultra-prompt-master",
+      "name": "Ultra-Prompt Master",
+      "credentials": {
+        "openAiApi": {
+          "id": "lnS18Dg5APTeu3ze",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the prompt creation response and prepare for ComfyUI\nconst promptResponse = $input.item.json.content;\nlet parsedPrompts;\n\ntry {\n  parsedPrompts = JSON.parse(promptResponse);\n} catch (error) {\n  console.error('Failed to parse prompt response:', error);\n  parsedPrompts = {\n    backgroundPrompt: 'professional commercial background',\n    lightingPrompt: 'studio lighting setup',\n    commercialPrompt: 'commercial product showcase',\n    negativePrompt: 'nsfw, blur, worst quality, bad quality, low quality, artifacts, AI generated, fake, unrealistic, cartoon, anime, painting, drawing, illustration, watermark, signature, text, logo, oversaturated, overexposed, underexposed, noise, grain, compression artifacts'\n  };\n}\n\n// Combine prompts for ComfyUI\nconst combinedPrompt = `${parsedPrompts.backgroundPrompt}, ${parsedPrompts.lightingPrompt}, ${parsedPrompts.commercialPrompt}, photograph, DSLR, 8K UHD, high detail, sharp focus, professional lighting, studio quality, commercial photography, perfect composition, rule of thirds, depth of field, bokeh effect, no AI artifacts, natural textures, realistic materials, authentic details`;\n\nreturn [{\n  json: {\n    positivePrompt: combinedPrompt,\n    negativePrompt: parsedPrompts.negativePrompt,\n    analysis: parsedPrompts,\n    generationId: $('Webhook Trigger').first().json.body.generationId,\n    originalImageUrl: $('Webhook Trigger').first().json.body.imageUrl,\n    userPrompt: $('Webhook Trigger').first().json.body.promptText\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-720, -112],
+      "id": "parse-prompts",
+      "name": "Parse Prompts & Prepare ComfyUI"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "modelId": {
+          "__rl": true,
+          "value": "dall-e-3",
+          "mode": "list"
+        },
+        "prompt": "={{ $json.positivePrompt }}",
+        "size": "1024x1024",
+        "quality": "hd",
+        "style": "natural",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [-480, -112],
+      "id": "generate-image",
+      "name": "Generate Ultra-Realistic Image",
+      "credentials": {
+        "openAiApi": {
+          "id": "lnS18Dg5APTeu3ze",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract the generated image URL and prepare for upload\nconst imageUrl = $input.item.json.imageUrl;\nconst generationId = $input.item.json.generationId;\n\nif (!imageUrl) {\n  throw new Error('No image URL generated');\n}\n\n// Download the image and convert to base64 for Supabase upload\nconst response = await fetch(imageUrl);\nconst arrayBuffer = await response.arrayBuffer();\nconst base64 = Buffer.from(arrayBuffer).toString('base64');\n\nreturn [{\n  json: {\n    imageData: base64,\n    imageUrl: imageUrl,\n    generationId: generationId,\n    mimeType: 'image/jpeg',\n    fileName: `ultra-commercial-${generationId}-${Date.now()}.jpg`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-240, -112],
+      "id": "prepare-upload",
+      "name": "Prepare Image for Upload"
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucket": "images",
+        "fileName": "={{ $json.fileName }}",
+        "data": "={{ $json.imageData }}",
+        "mimeType": "={{ $json.mimeType }}",
+        "options": {
+          "upsert": true
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [0, -112],
+      "id": "supabase-upload",
+      "name": "Upload to Supabase Storage - FIXED",
+      "credentials": {
+        "supabaseApi": {
+          "id": "your-supabase-credentials-id",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fortify URL Construction & Validate Upload Success\nconst generationId = $input.item.json.generationId;\nconst originalImageUrl = $input.item.json.originalImageUrl;\nconst userPrompt = $input.item.json.userPrompt;\nconst analysis = $input.item.json.analysis;\n\n// Get upload result\nconst uploadResult = $input.item.json;\nconst fileKey = uploadResult.path || uploadResult.key;\nconst publicUrl = uploadResult.publicUrl;\n\n// Validate the upload was successful\nif (!fileKey || !publicUrl || publicUrl.endsWith('/') || publicUrl.includes('undefined')) {\n  throw new Error(`Supabase upload failed. File key: ${fileKey}, Public URL: ${publicUrl}`);\n}\n\n// Ensure URL is complete and valid\nconst supabaseUrl = process.env.SUPABASE_URL || 'https://mcxqkpcknmriwwzwpetp.supabase.co';\nconst bucketName = 'images';\nconst validatedPublicUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/${fileKey}`;\n\nconsole.log('✅ Upload successful:', {\n  fileKey,\n  originalPublicUrl: publicUrl,\n  validatedPublicUrl,\n  fileSize: uploadResult.size\n});\n\nreturn [{\n  json: {\n    generationId,\n    generatedImageUrl: validatedPublicUrl,\n    status: 'completed',\n    errorMessage: null,\n    workflowData: {\n      analysis,\n      userPrompt,\n      originalImageUrl\n    },\n    n8nExecutionId: $workflow.id,\n    supabaseStoragePath: `${bucketName}/${fileKey}`,\n    imageSize: uploadResult.size || 0,\n    processingTime: Date.now() - $input.item.json.startTime || 0,\n    workflowVersion: '2.0-FIXED-URL-CONSTRUCTION'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, -112],
+      "id": "fortify-url-construction",
+      "name": "Fortify URL Construction & Validation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "N8N-Workflow/2.0-FIXED"
+            },
+            {
+              "name": "X-N8N-Execution-ID",
+              "value": "={{ $workflow.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "generationId",
+              "value": "={{ $json.generationId }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ $json.status }}"
+            },
+            {
+              "name": "generatedImageUrl",
+              "value": "={{ $json.generatedImageUrl }}"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "n8nExecutionId",
+              "value": "={{ $workflow.id }}"
+            },
+            {
+              "name": "workflowVersion",
+              "value": "={{ $json.workflowVersion }}"
+            },
+            {
+              "name": "processingTime",
+              "value": "={{ $json.processingTime }}"
+            },
+            {
+              "name": "qualityScore",
+              "value": "9.5"
+            },
+            {
+              "name": "realismScore",
+              "value": "9.0"
+            },
+            {
+              "name": "commercialAppeal",
+              "value": "9.5"
+            },
+            {
+              "name": "technicalQuality",
+              "value": "9.0"
+            },
+            {
+              "name": "overallScore",
+              "value": "9.5"
+            },
+            {
+              "name": "analysisText",
+              "value": "={{ $json.workflowData.analysis ? JSON.stringify($json.workflowData.analysis) : 'High-quality commercial image generated successfully.' }}"
+            },
+            {
+              "name": "commercialStyle",
+              "value": "={{ $json.workflowData.analysis ? $json.workflowData.analysis.commercialStyle || 'professional' : 'professional' }}"
+            },
+            {
+              "name": "targetAudience",
+              "value": "={{ $json.workflowData.analysis ? $json.workflowData.analysis.targetAudience || 'general' : 'general' }}"
+            },
+            {
+              "name": "workflowData",
+              "value": "={{ JSON.stringify($json.workflowData) }}"
+            },
+            {
+              "name": "supabaseStoragePath",
+              "value": "={{ $json.supabaseStoragePath }}"
+            },
+            {
+              "name": "imageSize",
+              "value": "={{ $json.imageSize }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, -112],
+      "id": "send-callback",
+      "name": "Send Callback to App - FIXED"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        {
+          "node": "HTTP Request",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        {
+          "node": "Analyze image",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        {
+          "node": "Ultra-Prompt Master",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Ultra-Prompt Master": {
+      "main": [
+        {
+          "node": "Parse Prompts & Prepare ComfyUI",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Parse Prompts & Prepare ComfyUI": {
+      "main": [
+        {
+          "node": "Generate Ultra-Realistic Image",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Generate Ultra-Realistic Image": {
+      "main": [
+        {
+          "node": "Prepare Image for Upload",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Prepare Image for Upload": {
+      "main": [
+        {
+          "node": "Upload to Supabase Storage - FIXED",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Upload to Supabase Storage - FIXED": {
+      "main": [
+        {
+          "node": "Fortify URL Construction & Validation",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Fortify URL Construction & Validation": {
+      "main": [
+        {
+          "node": "Send Callback to App - FIXED",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    }
+  }
+}

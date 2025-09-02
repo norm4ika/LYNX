@@ -10,7 +10,10 @@ ADD COLUMN IF NOT EXISTS target_audience TEXT,
 ADD COLUMN IF NOT EXISTS brand_guidelines TEXT,
 ADD COLUMN IF NOT EXISTS workflow_metadata JSONB,
 ADD COLUMN IF NOT EXISTS n8n_execution_id TEXT,
-ADD COLUMN IF NOT EXISTS workflow_version TEXT;
+ADD COLUMN IF NOT EXISTS workflow_version TEXT,
+-- NEW: Supabase Storage and binary data metadata
+ADD COLUMN IF NOT EXISTS supabase_storage_path TEXT,
+ADD COLUMN IF NOT EXISTS image_size INTEGER; -- in bytes
 
 -- Add RLS policy for service role to update generations (for callback endpoint)
 CREATE POLICY "Service role can update generations" ON generations

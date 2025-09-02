@@ -12,7 +12,17 @@ if (!supabaseAnonKey) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  storage: {
+    retryAttempts: 3,
+    retryInterval: 1000
+  }
+})
 
 // Server-side client with service role key
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -29,6 +39,10 @@ export const supabaseAdmin = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false
+    },
+    storage: {
+      retryAttempts: 3,
+      retryInterval: 1000
     }
   }
 )

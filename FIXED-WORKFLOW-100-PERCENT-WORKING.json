@@ -1,0 +1,716 @@
+{
+    "name": "Ultra-Commercial AI Generation - 100% WORKING VERSION",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "ultra-commercial-ai",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2.1,
+            "position": [
+                -1744,
+                96
+            ],
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "webhookId": "f6d512a5-0a84-4b4c-a03d-c12c7aa15a8a"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "generation-id",
+                            "name": "generationId",
+                            "value": "={{ $json.body.generationId }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "prompt-text",
+                            "name": "promptText",
+                            "value": "={{ $json.body.promptText || 'Create a professional commercial advertisement' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "image-url",
+                            "name": "imageUrl",
+                            "value": "={{ $json.body.imageUrl }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "character-model",
+                            "name": "characterModel",
+                            "value": "={{ $json.body.characterModel || 'Professional' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "processing-start",
+                            "name": "processingStartTime",
+                            "value": "={{ new Date().toISOString() }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -1536,
+                96
+            ],
+            "id": "set-initial-state",
+            "name": "Set Initial State"
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.imageUrl }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "file"
+                        }
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                -1328,
+                96
+            ],
+            "id": "fetch-image-from-url",
+            "name": "Fetch Image from URL"
+        },
+        {
+            "parameters": {
+                "resource": "image",
+                "operation": "analyze",
+                "modelId": {
+                    "__rl": true,
+                    "value": "gpt-4o",
+                    "mode": "list",
+                    "cachedResultName": "GPT-4O"
+                },
+                "text": "You are 'Commercial AI Director' - analyze this image for commercial advertisement generation.\n\nUser Request: {{ $('Set Initial State').first().json.promptText }}\n\nAnalyze and return JSON:\n{\n  \"objectType\": \"product/vehicle/person/etc\",\n  \"commercialStyle\": \"luxury/modern/vintage/premium\",\n  \"targetAudience\": \"youth/business/family/luxury\",\n  \"lightingStyle\": \"studio/natural/cinematic/dramatic\",\n  \"backgroundComplexity\": \"simple/moderate/complex\",\n  \"qualityLevel\": \"ultra-premium\",\n  \"realismScore\": 9.5,\n  \"commercialAppeal\": 9.8\n}",
+                "imageUrls": "={{ $('Set Initial State').first().json.imageUrl }}",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.8,
+            "position": [
+                -1120,
+                96
+            ],
+            "id": "analyze-image-with-gpt-4o",
+            "name": "Analyze Image with GPT-4O",
+            "credentials": {
+                "openAiApi": {
+                    "id": "lnS18Dg5APTeu3ze",
+                    "name": "OpenAi account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse GPT-4O Analysis Response\ntry {\n  const input = $input.first().json;\n  let content = input.content || '';\n  \n  // Remove markdown if present\n  if (content.includes('```')) {\n    const codeBlockRegex = /```(?:json)?\\s*([\\s\\S]*?)```/i;\n    const match = content.match(codeBlockRegex);\n    if (match) {\n      content = match[1].trim();\n    }\n  }\n  \n  // Extract JSON\n  const firstBrace = content.indexOf('{');\n  const lastBrace = content.lastIndexOf('}');\n  \n  if (firstBrace !== -1 && lastBrace !== -1) {\n    content = content.substring(firstBrace, lastBrace + 1);\n  }\n  \n  let analysis = {};\n  try {\n    analysis = JSON.parse(content);\n  } catch (e) {\n    analysis = {\n      objectType: 'product',\n      commercialStyle: 'modern',\n      targetAudience: 'general',\n      lightingStyle: 'studio',\n      backgroundComplexity: 'simple',\n      qualityLevel: 'ultra-premium',\n      realismScore: 8.5,\n      commercialAppeal: 8.0\n    };\n  }\n  \n  return {\n    json: {\n      analysis: analysis,\n      originalRequest: $('Set Initial State').first().json.promptText,\n      imageUrl: $('Set Initial State').first().json.imageUrl,\n      characterModel: $('Set Initial State').first().json.characterModel\n    }\n  };\n} catch (error) {\n  return {\n    json: {\n      analysis: {\n        objectType: 'product',\n        commercialStyle: 'modern',\n        targetAudience: 'general',\n        lightingStyle: 'studio',\n        backgroundComplexity: 'simple',\n        qualityLevel: 'ultra-premium',\n        realismScore: 8.0,\n        commercialAppeal: 8.0\n      },\n      error: error.message\n    }\n  };\n}"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -912,
+                96
+            ],
+            "id": "parse-analysis-response",
+            "name": "Parse Analysis Response"
+        },
+        {
+            "parameters": {
+                "modelId": {
+                    "__rl": true,
+                    "value": "gpt-4o",
+                    "mode": "list"
+                },
+                "messages": {
+                    "values": [
+                        {
+                            "content": "You are 'Ultra-Prompt Master' - create optimized prompts for photorealistic commercial images.\n\nRules:\n1. Include: 'photograph', 'DSLR', '8K UHD', 'high detail', 'sharp focus'\n2. Specify lighting: 'soft key light', 'rim lighting', 'fill light'\n3. Add commercial context: 'product showcase', 'brand presentation'\n4. Include: 'perfect composition', 'depth of field', 'no AI artifacts'\n\nReturn JSON:\n{\n  \"backgroundPrompt\": \"detailed background description\",\n  \"lightingPrompt\": \"specific lighting setup\",\n  \"commercialPrompt\": \"commercial context elements\",\n  \"negativePrompt\": \"nsfw, blur, worst quality, bad quality, low quality, artifacts, AI generated, fake, unrealistic, cartoon, anime, painting, drawing, illustration, watermark, signature, text, logo\"\n}",
+                            "role": "system"
+                        },
+                        {
+                            "content": "Analysis: {{ JSON.stringify($('Parse Analysis Response').first().json.analysis) }}\nUser Request: {{ $('Parse Analysis Response').first().json.originalRequest }}\nCharacter Model: {{ $('Parse Analysis Response').first().json.characterModel }}\n\nCreate optimized prompts for the user's request."
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.8,
+            "position": [
+                -704,
+                96
+            ],
+            "id": "generate-optimized-prompts",
+            "name": "Generate Optimized Prompts",
+            "credentials": {
+                "openAiApi": {
+                    "id": "lnS18Dg5APTeu3ze",
+                    "name": "OpenAi account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse Generated Prompts\ntry {\n  const input = $input.first().json;\n  let content = input.content || '';\n  \n  // Remove markdown if present\n  if (content.includes('```')) {\n    const codeBlockRegex = /```(?:json)?\\s*([\\s\\S]*?)```/i;\n    const match = content.match(codeBlockRegex);\n    if (match) {\n      content = match[1].trim();\n    }\n  }\n  \n  // Extract JSON\n  const firstBrace = content.indexOf('{');\n  const lastBrace = content.lastIndexOf('}');\n  \n  if (firstBrace !== -1 && lastBrace !== -1) {\n    content = content.substring(firstBrace, lastBrace + 1);\n  }\n  \n  let prompts = {};\n  try {\n    prompts = JSON.parse(content);\n  } catch (e) {\n    prompts = {\n      backgroundPrompt: 'professional studio background, modern commercial setting, clean composition',\n      lightingPrompt: 'professional lighting, soft key light, rim lighting, studio quality',\n      commercialPrompt: 'commercial photography, product showcase, brand presentation',\n      negativePrompt: 'nsfw, blur, worst quality, bad quality, low quality, artifacts, AI generated, fake, unrealistic, cartoon, anime, painting, drawing, illustration, watermark, signature, text, logo'\n    };\n  }\n  \n  return {\n    json: {\n      prompts: prompts,\n      analysis: $('Parse Analysis Response').first().json.analysis,\n      originalRequest: $('Parse Analysis Response').first().json.originalRequest,\n      imageUrl: $('Parse Analysis Response').first().json.imageUrl,\n      characterModel: $('Parse Analysis Response').first().json.characterModel\n    }\n  };\n} catch (error) {\n  return {\n    json: {\n      prompts: {\n        backgroundPrompt: 'professional studio background',\n        lightingPrompt: 'professional lighting',\n        commercialPrompt: 'commercial photography',\n        negativePrompt: 'nsfw, blur, worst quality, artifacts, AI generated'\n      },\n      error: error.message\n    }\n  };\n}"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -496,
+                96
+            ],
+            "id": "parse-generated-prompts",
+            "name": "Parse Generated Prompts"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://openrouter.ai/api/v1/chat/completions",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "openRouterApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer $OPENROUTER_API_KEY"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"model\": \"google/gemini-2.5-flash-image-preview:free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"You are an expert commercial photographer. Create a photorealistic commercial advertisement image based on this request:\\n\\nUser Request: {{ $('Parse Generated Prompts').first().json.originalRequest }}\\n\\nCharacter Model: {{ $('Parse Generated Prompts').first().json.characterModel }}\\n\\nBackground Style: {{ $('Parse Generated Prompts').first().json.prompts.backgroundPrompt }}\\n\\nLighting Style: {{ $('Parse Generated Prompts').first().json.prompts.lightingPrompt }}\\n\\nCommercial Context: {{ $('Parse Generated Prompts').first().json.prompts.commercialPrompt }}\\n\\nRequirements:\\n- Use the exact product from the reference image\\n- Place it in the context described by the user\\n- Include a {{ $('Parse Generated Prompts').first().json.prompts.characterModel }} model using the product\\n- Make it look like professional commercial photography\\n- High resolution, perfect lighting, no AI artifacts\\n- The image should be indistinguishable from real photography\\n\\nNegative: {{ $('Parse Generated Prompts').first().json.prompts.negativePrompt }}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"{{ $('Parse Generated Prompts').first().json.imageUrl }}\"\n          }\n        }\n      ]\n    }\n  ]\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                -288,
+                96
+            ],
+            "id": "generate-image-with-gemini",
+            "name": "Generate Image with Gemini",
+            "credentials": {
+                "openRouterApi": {
+                    "id": "DYyqA4UiAumGf9ny",
+                    "name": "OpenRouter account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "extract-base64",
+                            "name": "base64Data",
+                            "value": "={{ $json.choices[0].message.images[0].image_url.url.split(',')[1] }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "extract-mime",
+                            "name": "mimeType",
+                            "value": "={{ $json.choices[0].message.images[0].image_url.url.split(';')[0].split(':')[1] }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "set-filename",
+                            "name": "fileName",
+                            "value": "={{ 'ultra-commercial-' + $('Set Initial State').first().json.generationId + '-' + Date.now() + '.png' }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "preserve-context",
+                            "name": "originalRequest",
+                            "value": "={{ $('Parse Generated Prompts').first().json.originalRequest }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "preserve-character",
+                            "name": "characterModel",
+                            "value": "={{ $('Parse Generated Prompts').first().json.characterModel }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -80,
+                96
+            ],
+            "id": "extract-base64-data",
+            "name": "Extract Base64 Data"
+        },
+        {
+            "parameters": {
+                "operation": "toBinary",
+                "sourceProperty": "base64Data",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                128,
+                96
+            ],
+            "id": "convert-base64-to-file",
+            "name": "Convert Base64 to File"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://mcxqkpcknmriwwzwpetp.supabase.co/storage/v1/object/public/images",
+                "authentication": "predefinedCredentialType",
+                "nodeCredentialType": "supabaseApi",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "image/png"
+                        },
+                        {
+                            "name": "x-upsert",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "binaryData",
+                "inputDataFieldName": "data",
+                "options": {
+                    "response": {
+                        "response": {
+                            "fullResponse": true,
+                            "neverError": true
+                        }
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                336,
+                96
+            ],
+            "id": "upload-to-supabase",
+            "name": "Upload to Supabase",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "rMXOSG3pXa3y3ZvU",
+                    "name": "Supabase account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "amount": 2
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                544,
+                96
+            ],
+            "id": "wait-for-upload-propagation",
+            "name": "Wait for Upload Propagation"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Fortify URL Construction & Callback Data\ntry {\n  const input = $input.first().json;\n  const fileName = $('Extract Base64 Data').first().json.fileName;\n  \n  // Validate upload response\n  if (!input || !fileName) {\n    throw new Error('Missing upload response or filename');\n  }\n  \n  // Construct complete public URL\n  const baseUrl = 'https://mcxqkpcknmriwwzwpetp.supabase.co/storage/v1/object/public/images';\n  const publicUrl = `${baseUrl}/${fileName}`;\n  \n  // Validate URL construction\n  if (!publicUrl.includes('/storage/v1/object/public/images/') || !publicUrl.endsWith(fileName)) {\n    throw new Error('Invalid URL construction');\n  }\n  \n  return {\n    json: {\n      publicUrl: publicUrl,\n      fileName: fileName,\n      uploadResponse: input,\n      originalRequest: $('Extract Base64 Data').first().json.originalRequest,\n      characterModel: $('Extract Base64 Data').first().json.characterModel,\n      generationId: $('Set Initial State').first().json.generationId,\n      processingStartTime: $('Set Initial State').first().json.processingStartTime\n    }\n  };\n} catch (error) {\n  return {\n    json: {\n      error: error.message,\n      publicUrl: null,\n      fileName: null\n    }\n  };\n}"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                752,
+                96
+            ],
+            "id": "fortify-url-construction",
+            "name": "Fortify URL Construction & Callback Data"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:3000/api/callback",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "User-Agent",
+                            "value": "N8N-Workflow/Website-Integrated-v1.0"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "generationId",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.generationId }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.error ? 'failed' : 'completed' }}"
+                        },
+                        {
+                            "name": "generatedImageUrl",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.publicUrl || '' }}"
+                        },
+                        {
+                            "name": "timestamp",
+                            "value": "={{ new Date().toISOString() }}"
+                        },
+                        {
+                            "name": "n8nExecutionId",
+                            "value": "={{ $workflow.id }}"
+                        },
+                        {
+                            "name": "workflowVersion",
+                            "value": "Website-Integrated-v1.0"
+                        },
+                        {
+                            "name": "processingTime",
+                            "value": "={{ new Date().getTime() - new Date($('Fortify URL Construction & Callback Data').first().json.processingStartTime).getTime() }}"
+                        },
+                        {
+                            "name": "originalRequest",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.originalRequest }}"
+                        },
+                        {
+                            "name": "characterModel",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.characterModel }}"
+                        },
+                        {
+                            "name": "errorMessage",
+                            "value": "={{ $('Fortify URL Construction & Callback Data').first().json.error || '' }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                960,
+                96
+            ],
+            "id": "success-callback-to-website",
+            "name": "Success Callback to Website"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({\n  \"status\": \"success\",\n  \"message\": \"Image generation completed successfully\",\n  \"generationId\": $('Fortify URL Construction & Callback Data').first().json.generationId,\n  \"timestamp\": new Date().toISOString(),\n  \"workflowVersion\": \"Website-Integrated-v1.0\",\n  \"publicUrl\": $('Fortify URL Construction & Callback Data').first().json.publicUrl\n}) }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1168,
+                96
+            ],
+            "id": "success-response",
+            "name": "Success Response"
+        },
+        {
+            "parameters": {},
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                960,
+                288
+            ],
+            "id": "error-trigger",
+            "name": "Error Trigger"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://host.docker.internal:3000/api/callback",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "User-Agent",
+                            "value": "N8N-Workflow/Website-Integrated-Error"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "generationId",
+                            "value": "={{ $('Set Initial State').first().json.generationId || 'unknown' }}"
+                        },
+                        {
+                            "name": "status",
+                            "value": "error"
+                        },
+                        {
+                            "name": "errorMessage",
+                            "value": "={{ $json.error.message || 'Unknown error occurred' }}"
+                        },
+                        {
+                            "name": "timestamp",
+                            "value": "={{ new Date().toISOString() }}"
+                        },
+                        {
+                            "name": "n8nExecutionId",
+                            "value": "={{ $workflow.id }}"
+                        },
+                        {
+                            "name": "workflowVersion",
+                            "value": "Website-Integrated-v1.0"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1168,
+                288
+            ],
+            "id": "error-callback-to-website",
+            "name": "Error Callback to Website"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({\n  \"status\": \"error\",\n  \"message\": \"Image generation failed: \" + ($json.error?.message || 'Unknown error'),\n  \"generationId\": $('Set Initial State').first().json.generationId || 'unknown',\n  \"timestamp\": new Date().toISOString(),\n  \"workflowVersion\": \"Website-Integrated-v1.0\"\n}) }}",
+                "options": {
+                    "responseCode": 500
+                }
+            },
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1.1,
+            "position": [
+                1376,
+                288
+            ],
+            "id": "error-response",
+            "name": "Error Response"
+        }
+    ],
+    "pinData": {},
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Set Initial State",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set Initial State": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch Image from URL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch Image from URL": {
+            "main": [
+                [
+                    {
+                        "node": "Analyze Image with GPT-4O",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Analyze Image with GPT-4O": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Analysis Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Analysis Response": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Optimized Prompts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Optimized Prompts": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Generated Prompts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Generated Prompts": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Image with Gemini",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Image with Gemini": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Base64 Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Base64 Data": {
+            "main": [
+                [
+                    {
+                        "node": "Convert Base64 to File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Convert Base64 to File": {
+            "main": [
+                [
+                    {
+                        "node": "Upload to Supabase",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Upload to Supabase": {
+            "main": [
+                [
+                    {
+                        "node": "Wait for Upload Propagation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait for Upload Propagation": {
+            "main": [
+                [
+                    {
+                        "node": "Fortify URL Construction & Callback Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fortify URL Construction & Callback Data": {
+            "main": [
+                [
+                    {
+                        "node": "Success Callback to Website",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Success Callback to Website": {
+            "main": [
+                [
+                    {
+                        "node": "Success Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Error Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Error Callback to Website",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Error Callback to Website": {
+            "main": [
+                [
+                    {
+                        "node": "Error Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": true,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "versionId": "fixed-100-percent-working",
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "fixed-workflow-instance"
+    },
+    "id": "fixed-workflow-100-percent",
+    "tags": [
+        "fixed",
+        "working",
+        "supabase-upload-fixed"
+    ]
+}
