@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function POST(request: NextRequest) {
   try {
     const { fileUrl } = await request.json()
-    
+
     if (!fileUrl) {
       return NextResponse.json({
         error: 'Missing fileUrl parameter'
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Extract file path from URL
     let filePath = ''
     let bucketName = ''
-    
+
     if (fileUrl.includes('/storage/v1/object/public/')) {
       const urlParts = fileUrl.split('/storage/v1/object/public/')
       if (urlParts.length > 1) {
@@ -61,13 +61,13 @@ export async function POST(request: NextRequest) {
     let fileMetadata = null
     if (fileExists) {
       try {
-        const { data: metadata, error: metadataError } = await supabaseAdmin.storage
+        const { data: metadata } = await supabaseAdmin.storage
           .from(bucketName)
           .getPublicUrl(filePath)
-        
-        if (!metadataError) {
+
+        if (metadata) {
           fileMetadata = {
-            publicUrl: metadata.data.publicUrl,
+            publicUrl: metadata.publicUrl,
             size: fileData.find(f => f.name === fileName)?.metadata?.size,
             mimeType: fileData.find(f => f.name === fileName)?.metadata?.mimetype,
             lastModified: fileData.find(f => f.name === fileName)?.metadata?.lastModified
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     let isAccessible = false
     let httpStatus = null
     let contentType = null
-    
+
     if (fileExists) {
       try {
         const response = await fetch(fileUrl, { method: 'HEAD' })
