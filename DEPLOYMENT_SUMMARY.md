@@ -80,10 +80,11 @@ NEXT_PUBLIC_APP_URL = https://your-domain.vercel.app
 - `VERCEL_DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
 - `VERCEL_QUICK_START.md` - Quick start guide
 - `VERCEL_ENV_SETUP.md` - Environment variables setup guide
+- `NODEJS_UPGRADE_INFO.md` - Node.js version upgrade guide
 - `DEPLOYMENT_SUMMARY.md` - This summary file
 
 ## 📝 Modified Files
-- `package.json` - Added build check script
+- `package.json` - Added build check script, Updated Node.js to 22.x
 - `vercel.json` - Removed environment variables references (should not be used)
 - `src/lib/supabase.ts` - Improved environment variable handling
 

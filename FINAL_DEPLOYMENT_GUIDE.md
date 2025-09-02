@@ -17,6 +17,7 @@ Environment variables უნდა დაემატოს **პირდაპ
 - ✅ `vercel.json` ფაილიდან მოშორებული environment variables references
 - ✅ შექმნილია environment check scripts
 - ✅ გაუმჯობესებულია error handling
+- ✅ Node.js version განახლებულია 18.x-დან 22.x-მდე
 
 ### 2. Vercel Dashboard Setup
 
@@ -127,11 +128,12 @@ Build logs-ში უნდა ნახოთ:
 - `VERCEL_ENV_SETUP.md` - Environment variables setup guide
 - `VERCEL_QUICK_START.md` - Quick start guide
 - `VERCEL_DEPLOYMENT_INSTRUCTIONS.md` - Detailed instructions
+- `NODEJS_UPGRADE_INFO.md` - Node.js version upgrade guide
 - `DEPLOYMENT_SUMMARY.md` - Summary of all changes
 
 ### Modified Files
 - `vercel.json` - Removed environment variables references
-- `package.json` - Added build check script
+- `package.json` - Added build check script, Updated Node.js to 22.x
 - `src/lib/supabase.ts` - Improved error handling
 
 ## 🎯 Expected Result
