@@ -1,28 +1,46 @@
 import { createClient } from '@supabase/supabase-js'
+import { logEnvironmentStatus } from './env-check'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Log environment status in development
+if (process.env.NODE_ENV === 'development') {
+  logEnvironmentStatus()
+}
+
 // Check if environment variables are set
 if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
+  console.error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
+  // Don't throw in production, let the app handle gracefully
+  if (process.env.NODE_ENV === 'development') {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
+  }
 }
 
 if (!supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  console.error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  // Don't throw in production, let the app handle gracefully
+  if (process.env.NODE_ENV === 'development') {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
+  }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  storage: {
-    retryAttempts: 3,
-    retryInterval: 1000
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    storage: {
+      retryAttempts: 3,
+      retryInterval: 1000
+    }
   }
-})
+)
 
 // Server-side client with service role key
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -33,8 +51,8 @@ if (!serviceRoleKey) {
 }
 
 export const supabaseAdmin = createClient(
-  supabaseUrl,
-  serviceRoleKey || supabaseAnonKey, // Fallback to anon key if service role key is not available
+  supabaseUrl || 'https://placeholder.supabase.co',
+  serviceRoleKey || supabaseAnonKey || 'placeholder-key', // Fallback to anon key if service role key is not available
   {
     auth: {
       autoRefreshToken: false,
