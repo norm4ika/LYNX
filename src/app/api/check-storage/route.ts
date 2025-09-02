@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
             fileCount: files?.length || 0,
             sampleFiles: files?.slice(0, 5) || [],
             policies: policies || [],
-            recommendations: []
+            recommendations: [] as string[]
         }
 
         // Add recommendations based on configuration

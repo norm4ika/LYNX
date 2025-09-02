@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         const generationsByUser = generations?.reduce((acc: any, gen: Generation) => {
             const email = gen.users?.email || 'unknown'
             if (!acc[email]) {
-                acc[email] = []
+                acc[email] = [] as any[]
             }
             acc[email].push({
                 id: gen.id,

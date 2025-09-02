@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       generated_image_url: gen.generated_image_url,
       prompt_text: gen.prompt_text,
       error_message: gen.error_message,
-      issues: []
+      issues: [] as string[]
     })) || []
 
     // Identify issues

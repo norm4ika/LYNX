@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`Found ${generations?.length || 0} generations with URL issues`)
 
-    const repairResults = []
+    const repairResults: any[] = []
     let repairedCount = 0
     let skippedCount = 0
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           const urlParts = originalUrl.split('/storage/v1/object/public/')
           if (urlParts.length > 1) {
             actualFilePath = urlParts[1]
-            
+
             // Check if file exists in storage
             const { data: fileData, error: fileError } = await supabaseAdmin.storage
               .from('images')

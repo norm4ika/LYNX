@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       error_message: gen.error_message,
       n8n_execution_id: gen.n8n_execution_id,
       workflow_metadata: gen.workflow_metadata,
-      issues: []
+      issues: [] as string[]
     })) || []
 
     // Identify N8N-specific issues

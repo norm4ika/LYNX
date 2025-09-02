@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         console.log(`Found ${usersToMigrate.length} users to migrate`)
 
         // Migrate users
-        const migrations = []
+        const migrations: any[] = []
         for (const authUser of usersToMigrate) {
             try {
                 const { error: insertError } = await supabaseAdmin
