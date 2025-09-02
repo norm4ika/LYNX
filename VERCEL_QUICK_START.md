@@ -8,6 +8,8 @@
 - Vercel will automatically detect Next.js
 
 ### 2. Add Environment Variables (CRITICAL!)
+**⚠️ მნიშვნელოვანი**: Environment variables უნდა დაემატოს **პირდაპირ Vercel Dashboard-ზე**, არა `vercel.json` ფაილში!
+
 Go to **Project Settings** → **Environment Variables** and add:
 
 #### 🔑 Required Variables

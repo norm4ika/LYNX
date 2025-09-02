@@ -14,7 +14,7 @@
 
 ### 3. Build Process Enhancement
 - **შეასწორა `package.json`** - build script-ში დაემატა environment check
-- **შეასწორა `vercel.json`** - დაემატა `NEXT_PUBLIC_APP_URL` environment variable
+- **შეასწორა `vercel.json`** - მოშორებული environment variables references (არ უნდა იყოს გამოყენებული)
 
 ### 4. Documentation
 - **შეიქმნა `VERCEL_DEPLOYMENT_INSTRUCTIONS.md`** - დეტალური ინსტრუქცია
@@ -79,15 +79,18 @@ NEXT_PUBLIC_APP_URL = https://your-domain.vercel.app
 - `scripts/vercel-build-check.js` - Build-time environment check
 - `VERCEL_DEPLOYMENT_INSTRUCTIONS.md` - Detailed deployment guide
 - `VERCEL_QUICK_START.md` - Quick start guide
+- `VERCEL_ENV_SETUP.md` - Environment variables setup guide
 - `DEPLOYMENT_SUMMARY.md` - This summary file
 
 ## 📝 Modified Files
 - `package.json` - Added build check script
-- `vercel.json` - Added APP_URL environment variable
+- `vercel.json` - Removed environment variables references (should not be used)
 - `src/lib/supabase.ts` - Improved environment variable handling
 
 ## 🎉 Expected Result
-Vercel-ზე დეპლოიმენტი უნდა წარმატებით დასრულდეს environment variables-ის სწორად დაყენების შემდეგ.
+Vercel-ზე დეპლოიმენტი უნდა წარმატებით დასრულდეს environment variables-ის **Vercel Dashboard-ზე პირდაპირ დამატების** შემდეგ.
+
+**⚠️ მნიშვნელოვანი**: Environment variables არ უნდა დაემატოს `vercel.json` ფაილში, მხოლოდ Vercel Dashboard-ზე!
 
 ---
 **მნიშვნელოვანი**: Environment variables ცვლილებების შემდეგ საჭიროა redeploy!
